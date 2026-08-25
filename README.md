@@ -76,11 +76,57 @@ Remote search URL (the phone appends the typed term):
 https://<flux-host>/api/remote-directory/search?token=<REMOTE_DIRECTORY_TOKEN>&q=
 ```
 
+## LDAP directory
+
+Clients that speak LDAP rather than an XML phonebook (many desk phones, Bria)
+use the second protocol. It is a listener, not a route, so it runs as its own
+process:
+
+```bash
+php artisan remote-directory:ldap
+```
+
+```dotenv
+REMOTE_DIRECTORY_LDAP_IP=0.0.0.0
+REMOTE_DIRECTORY_LDAP_PORT=389
+REMOTE_DIRECTORY_LDAP_BASE_DN="dc=flux,dc=local"
+REMOTE_DIRECTORY_LDAP_USERNAME="cn=phones,dc=flux,dc=local"
+REMOTE_DIRECTORY_LDAP_PASSWORD=some-long-random-string
+```
+
+Phone side (Yealink wording, Fanvil is the same with other labels):
+
+| Setting | Value |
+|---------|-------|
+| Server / Port | the Flux host, `389` |
+| Base | the value of `REMOTE_DIRECTORY_LDAP_BASE_DN` |
+| Username / Password | the values above |
+| Name filter | `(\|(cn=%)(sn=%))` |
+| Number filter | `(\|(telephoneNumber=%)(mobile=%))` |
+| Name attributes | `cn sn givenName` |
+| Number attributes | `telephoneNumber mobile` |
+| Version | LDAP 3 |
+
+An entry carries `cn` (company and person), `o`, `givenName`, `sn`,
+`telephoneNumber` and `mobile`, and empty fields are left out. The DN is
+`uid=<address id>,<base dn>`.
+
+The listener serves one bind account. Without `REMOTE_DIRECTORY_LDAP_USE_SSL`
+or a certificate in `REMOTE_DIRECTORY_LDAP_SSL_CERT`, that password and every
+search travel in the clear, so either terminate TLS or keep the port on the
+network the phones sit on. Anonymous binds are off unless
+`REMOTE_DIRECTORY_LDAP_ALLOW_ANONYMOUS=true`, which hands the directory to
+anyone who reaches the port.
+
+The server forks one process per connection and needs `ext-pcntl` and
+`ext-posix`. On Forge it belongs in a daemon, not in the deploy script.
+
 ## Adding another protocol
 
-The query lives in `DirectorySearchController`, the rendering in
-`Formatters/PhonebookXmlFormatter`. LDAP or CardDAV need their own formatter and
-route, not a second query.
+The query lives in `AddressDirectorySearch` and is shared by both protocols.
+The XML side renders in `Formatters/PhonebookXmlFormatter`, the LDAP side in
+`Ldap/DirectoryRequestHandler`. A third protocol writes its own renderer and
+reuses the same query.
 
 ## Tests
 

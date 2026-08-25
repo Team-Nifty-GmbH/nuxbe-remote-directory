@@ -2,10 +2,9 @@
 
 namespace NuxbeRemoteDirectory\Http\Controllers;
 
-use FluxErp\Models\Address;
-use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use NuxbeRemoteDirectory\AddressDirectorySearch;
 use NuxbeRemoteDirectory\Formatters\PhonebookXmlFormatter;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -15,44 +14,20 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class DirectorySearchController extends Controller
 {
-    public function __invoke(Request $request, PhonebookXmlFormatter $formatter): Response
-    {
+    public function __invoke(
+        Request $request,
+        AddressDirectorySearch $search,
+        PhonebookXmlFormatter $formatter
+    ): Response {
         if (! $this->isAuthorized($request)) {
             return response('', 401);
         }
 
-        $term = trim((string) $request->query('q', ''));
-        $digits = preg_replace('/\D+/', '', $term);
-        $limit = $this->limit($request);
-        $page = max(1, (int) $request->query('page', 1));
-
-        $addresses = Address::query()
-            ->where('is_active', true)
-            ->when(
-                $term !== '',
-                fn (Builder $query) => $query->where(
-                    fn (Builder $query) => $query
-                        ->where('company', 'like', $term . '%')
-                        ->orWhere('firstname', 'like', $term . '%')
-                        ->orWhere('lastname', 'like', $term . '%')
-                        ->when(
-                            strlen((string) $digits) >= 3,
-                            fn (Builder $query) => $query
-                                ->orWhere('phone', 'like', '%' . $digits . '%')
-                                ->orWhere('phone_mobile', 'like', '%' . $digits . '%')
-                        )
-                )
-            )
-            ->where(
-                fn (Builder $query) => $query
-                    ->whereNotNull('phone')
-                    ->orWhereNotNull('phone_mobile')
-            )
-            ->orderBy('company')
-            ->orderBy('lastname')
-            ->orderBy('id')
-            ->forPage($page, $limit)
-            ->get(['id', 'company', 'firstname', 'lastname', 'phone', 'phone_mobile']);
+        $addresses = $search->search(
+            (string) $request->query('q', ''),
+            $search->limit((int) $request->query('limit')),
+            (int) $request->query('page', 1)
+        );
 
         return response($formatter->format($addresses), 200)
             ->header('Content-Type', 'text/xml; charset=utf-8');
@@ -66,13 +41,5 @@ class DirectorySearchController extends Controller
         $sent = $request->bearerToken() ?: $request->query('token');
 
         return (bool) $token && hash_equals((string) $token, (string) $sent);
-    }
-
-    protected function limit(Request $request): int
-    {
-        $max = (int) config('remote-directory.max_limit');
-        $requested = (int) $request->query('limit', config('remote-directory.limit'));
-
-        return max(1, min($requested, $max));
     }
 }

@@ -12,6 +12,7 @@
     ],
     "require": {
         "php": "^8.2",
+        "freedsx/ldap": "^0.8",
         "team-nifty-gmbh/flux-erp": "^1.0 || dev-main"
     },
     "require-dev": {

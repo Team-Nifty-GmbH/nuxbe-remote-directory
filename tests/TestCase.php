@@ -76,6 +76,9 @@ abstract class TestCase extends BaseTestCase
         $app['config']->set('remote-directory.token', 'test-token');
         $app['config']->set('remote-directory.limit', 50);
         $app['config']->set('remote-directory.max_limit', 200);
+        $app['config']->set('remote-directory.ldap.base_dn', 'dc=flux,dc=local');
+        $app['config']->set('remote-directory.ldap.username', 'cn=phones,dc=flux,dc=local');
+        $app['config']->set('remote-directory.ldap.password', 'phone-secret');
     }
 
     protected function getPackageAliases($app): array
