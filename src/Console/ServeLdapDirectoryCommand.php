@@ -5,6 +5,7 @@ namespace NuxbeRemoteDirectory\Console;
 use FreeDSx\Ldap\LdapServer;
 use Illuminate\Console\Command;
 use NuxbeRemoteDirectory\Ldap\DirectoryRequestHandler;
+use Psr\Log\LoggerInterface;
 use function Laravel\Prompts\error;
 use function Laravel\Prompts\info;
 use function Laravel\Prompts\warning;
@@ -15,7 +16,7 @@ class ServeLdapDirectoryCommand extends Command
 
     protected $description = 'Serve the Flux contacts as an LDAP directory for phone clients';
 
-    public function handle(DirectoryRequestHandler $handler): int
+    public function handle(DirectoryRequestHandler $handler, LoggerInterface $logger): int
     {
         $config = config('remote-directory.ldap');
 
@@ -46,6 +47,9 @@ class ServeLdapDirectoryCommand extends Command
             'ssl_cert_key' => $config['ssl_cert_key'],
         ]))
             ->useRequestHandler($handler)
+            // A listener that rejects binds is worth a log: without one, nobody
+            // can tell afterwards who connected and what they searched for.
+            ->useLogger($logger)
             ->run();
 
         return static::SUCCESS;

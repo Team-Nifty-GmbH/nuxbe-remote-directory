@@ -12,6 +12,11 @@ return [
     // Hard server side cap, a client cannot ask for more than this.
     'max_limit' => (int) env('REMOTE_DIRECTORY_MAX_LIMIT', 200),
 
+    // Requests per minute per IP on the search route, as Laravel's throttle
+    // middleware takes it. The token travels in the URL, so the endpoint is
+    // one guessed string away from being read by anyone.
+    'throttle' => env('REMOTE_DIRECTORY_THROTTLE', '60,1'),
+
     // The LDAP directory, served by "php artisan remote-directory:ldap".
     // Clients that speak LDAP instead of the XML phonebook (Yealink, Fanvil,
     // Bria) point at this listener. Credentials are sent in the clear unless
