@@ -11,7 +11,7 @@
         }
     ],
     "require": {
-        "php": "^8.2",
+        "php": "^8.4",
         "freedsx/ldap": "^0.8",
         "team-nifty-gmbh/flux-erp": "^1.12"
     },
